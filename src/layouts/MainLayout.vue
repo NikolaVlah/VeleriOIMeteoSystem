@@ -30,7 +30,19 @@
         >
           Essential Links
         </q-item-label>
+         <q-item
+    clickable
+    v-ripple
+    to="/meteo-stations"
+  >
+    <q-item-section avatar>
+      <q-icon name="cloud" />
+    </q-item-section>
 
+    <q-item-section>
+      <q-item-label>Meteorološke postaje</q-item-label>
+    </q-item-section>
+  </q-item>
         <EssentialLink
           v-for="link in linksList"
           :key="link.title"
