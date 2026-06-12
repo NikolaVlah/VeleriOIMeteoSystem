@@ -58,7 +58,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { db } from 'src/firebase/firebase'
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc
+} from 'firebase/firestore'
 
 const dialog = ref(false)
 const isEdit = ref(false)
@@ -69,26 +78,7 @@ const form = ref({
   location: ''
 })
 
-const stations = ref([
-  {
-    id: 1,
-    name: 'Meteo postaja Rijeka',
-    location: 'Rijeka',
-    sensors: [
-      { id: 1, name: 'Temperatura', type: '°C' },
-      { id: 2, name: 'Vlaga', type: '%' }
-    ]
-  },
-  {
-    id: 2,
-    name: 'Meteo postaja Opatija',
-    location: 'Opatija',
-    sensors: [
-      { id: 3, name: 'Tlak zraka', type: 'hPa' },
-      { id: 4, name: 'Vjetar', type: 'km/h' }
-    ]
-  }
-])
+const stations = ref([])
 
 const columns = [
   {
@@ -112,6 +102,18 @@ const columns = [
     align: 'center'
   }
 ]
+const loadStations = async () => {
+  const querySnapshot = await getDocs(collection(db, 'meteoStation'))
+  
+  stations.value = querySnapshot.docs.map(docSnap => ({
+    id: docSnap.id,
+    ...docSnap.data()
+  }))
+}
+
+onMounted(() => {
+  loadStations()
+})
 
 const openAddDialog = () => {
   isEdit.value = false
@@ -129,14 +131,16 @@ const openEditDialog = (row) => {
   dialog.value = true
 }
 
-const saveStation = () => {
+const saveStation = async () => {
   if (isEdit.value) {
-    const index = stations.value.findIndex(s => s.id === form.value.id)
-    stations.value[index].name = form.value.name
-    stations.value[index].location = form.value.location
+    const stationRef = doc(db, 'meteoStation', form.value.id)
+
+    await updateDoc(stationRef, {
+      name: form.value.name,
+      location: form.value.location
+    })
   } else {
-    stations.value.push({
-      id: Date.now(),
+    await addDoc(collection(db, 'meteoStation'), {
       name: form.value.name,
       location: form.value.location,
       sensors: []
@@ -144,11 +148,13 @@ const saveStation = () => {
   }
 
   dialog.value = false
+  await loadStations()
 }
 
-const confirmDelete = (row) => {
+const confirmDelete = async (row) => {
   if (confirm('Jeste li sigurni da želite obrisati postaju?')) {
-    stations.value = stations.value.filter(s => s.id !== row.id)
+    await deleteDoc(doc(db, 'meteoStation', row.id))
+    await loadStations()
   }
 }
 </script>
